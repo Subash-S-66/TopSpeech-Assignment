@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import LoadingSkeleton from "../../components/LoadingSkeleton";
 import { fetchQuizQuestions } from "../../services/gemini";
-import { getLearningStats, saveLessonResult } from "../../utils/storage";
+import { getLearningStats, getQuestionCountFromStats, saveLessonResult } from "../../utils/storage";
 
 const normalize = (value) => value.trim().toLowerCase();
 
@@ -11,6 +11,7 @@ export default function QuizPage() {
   const navigate = useNavigate();
   const learningStats = useMemo(() => getLearningStats(), []);
   const topic = learningStats.topic || "DSA";
+  const questionCount = useMemo(() => getQuestionCountFromStats(), []);
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,15 +23,15 @@ export default function QuizPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const generated = await fetchQuizQuestions(topic, learningStats.currentDifficulty);
-      setQuestions(generated.slice(0, 5));
+      const generated = await fetchQuizQuestions(topic, learningStats.currentDifficulty, questionCount);
+      setQuestions(generated);
       setLoading(false);
     };
     load();
-  }, [topic, learningStats.currentDifficulty]);
+  }, [topic, learningStats.currentDifficulty, questionCount]);
 
   if (loading) {
-    return <LoadingSkeleton rows={5} />;
+    return <LoadingSkeleton rows={Math.min(6, questionCount)} />;
   }
 
   if (!questions.length) {

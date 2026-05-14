@@ -1,7 +1,8 @@
 const normalizeQuestion = (item, index, topic) => {
-  const optionsRaw = Array.isArray(item.options) ? item.options.filter(Boolean).slice(0, 6) : [];
-  const options = optionsRaw.length >= 2 ? optionsRaw : ["Option A", "Option B", "Option C", "Option D"];
-  const answer = typeof item.answer === "string" ? item.answer.trim() : "";
+  const optionsRaw = Array.isArray(item.options) ? item.options.filter(Boolean).slice(0, 4) : [];
+  const options = optionsRaw.length === 4 ? optionsRaw : ["Option A", "Option B", "Option C", "Option D"];
+  const answerRaw = typeof item.answer === "string" ? item.answer.trim() : "";
+  const answer = options.includes(answerRaw) ? answerRaw : options[0];
 
   return {
     id: `q-${index + 1}`,
@@ -33,7 +34,7 @@ const fallbackByTopic = {
       difficulty: "easy",
     },
     {
-      question: "Flashcard: Time complexity of merge sort?",
+      question: "MCQ: Time complexity of merge sort?",
       options: ["O(n)", "O(n log n)", "O(n^2)", "O(log n)"],
       answer: "O(n log n)",
       explanation: "Merge sort splits recursively and merges linearly.",
@@ -77,7 +78,7 @@ const defaultFallback = [
     difficulty: "easy",
   },
   {
-    question: "Flashcard: What does MVP stand for in product building?",
+    question: "MCQ: What does MVP stand for in product building?",
     options: ["Most Valuable Process", "Minimum Viable Product", "Maximum Verified Plan", "Managed Value Pipeline"],
     answer: "Minimum Viable Product",
     explanation: "MVP is the smallest useful version to validate assumptions.",
@@ -104,9 +105,13 @@ const defaultFallback = [
   },
 ];
 
-export const getFallbackQuestions = (topic) => {
+export const getFallbackQuestions = (topic, questionCount = 5) => {
   const pack = fallbackByTopic[topic] || defaultFallback;
-  return pack.map((item, index) => normalizeQuestion(item, index, topic));
+  const normalized = pack.map((item, index) => normalizeQuestion(item, index, topic));
+  return Array.from({ length: questionCount }).map((_, index) => {
+    const source = normalized[index % normalized.length];
+    return { ...source, id: `q-${index + 1}` };
+  });
 };
 
 const parseJsonFromText = (text) => {
@@ -119,13 +124,13 @@ const parseJsonFromText = (text) => {
   return JSON.parse(cleaned);
 };
 
-export const fetchQuizQuestions = async (topic, difficulty = "medium") => {
+export const fetchQuizQuestions = async (topic, difficulty = "medium", questionCount = 5) => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
-    return getFallbackQuestions(topic);
+    return getFallbackQuestions(topic, questionCount);
   }
 
-  const prompt = `Generate exactly 5 MCQ quiz questions for the topic: ${topic}. Target overall difficulty: ${difficulty}. Return only JSON array. Each item must have this schema: {"question":"","options":[],"answer":"","explanation":"","difficulty":""}. Rules: every question must include exactly 4 options; answer must match one of the options exactly.`;
+  const prompt = `Generate exactly ${questionCount} MCQ quiz questions for the topic: ${topic}. Target overall difficulty: ${difficulty}. Return only JSON array. Each item must have this schema: {"question":"","options":[],"answer":"","explanation":"","difficulty":""}. Rules: every question must include exactly 4 options; answer must match one of the options exactly.`;
 
   try {
     const response = await fetch(
@@ -157,13 +162,13 @@ export const fetchQuizQuestions = async (topic, difficulty = "medium") => {
     }
 
     const normalized = parsed
-      .slice(0, 5)
+      .slice(0, questionCount)
       .map((item, index) => normalizeQuestion(item, index, topic))
-      .filter((item) => item.options.length >= 2);
-    if (normalized.length < 5) throw new Error("Gemini returned fewer than 5 valid questions");
+      .filter((item) => item.options.length === 4);
+    if (normalized.length < questionCount) throw new Error("Gemini returned fewer than requested valid questions");
 
     return normalized;
   } catch {
-    return getFallbackQuestions(topic);
+    return getFallbackQuestions(topic, questionCount);
   }
 };
