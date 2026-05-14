@@ -1,5 +1,6 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import InstallPrompt from "../components/pwa/InstallPrompt";
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -29,8 +30,8 @@ export default function AppLayout() {
         className="absolute -bottom-24 -right-16 -z-10 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl"
       />
 
-      {showBackButton ? (
-        <div className="relative z-10 flex w-full justify-start pb-4 sm:pb-6">
+      <div className="relative z-10 flex w-full items-center justify-between pb-4 sm:pb-6">
+        {showBackButton ? (
           <button
             type="button"
             onClick={handleBack}
@@ -39,8 +40,12 @@ export default function AppLayout() {
             <span aria-hidden="true">←</span>
             Back
           </button>
-        </div>
-      ) : null}
+        ) : (
+          <span />
+        )}
+
+        <InstallPrompt variant="button" className="bg-white text-slate-900 hover:bg-slate-100" />
+      </div>
 
       <div className="relative z-10 flex w-full flex-1 items-start justify-center sm:items-center">
         <Outlet />

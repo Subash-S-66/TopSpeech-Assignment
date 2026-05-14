@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import InstallPrompt from "../components/pwa/InstallPrompt";
 import { DAILY_TIMES } from "../data/onboardingData";
 import { getLearningStats, saveOnboarding, startPathEditSession } from "../utils/storage";
 import { saveSpeechState } from "../utils/speechStorage";
@@ -55,10 +54,9 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Today {topic} Challenge</h1>
-            <p className="mt-1 text-sm text-white/85">Track your LevelUp progress and install the app for quick access.</p>
+            <p className="mt-1 text-sm text-white/85">Track your LevelUp progress with adaptive daily lessons.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <InstallPrompt variant="button" className="bg-white text-slate-900 hover:bg-slate-100" />
             <button
               type="button"
               onClick={handleEditPath}
