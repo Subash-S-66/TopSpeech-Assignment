@@ -118,7 +118,7 @@ const DISABLED_MODELS_KEY = "quiz.disabledGeminiModels";
 const GEMINI_COOLDOWN_KEY = "quiz.geminiCooldownUntil";
 const GEMINI_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-1.5-flash"];
+const GEMINI_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
 const buildGeminiRequest = (prompt, apiKey, model) =>
   fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
@@ -196,7 +196,6 @@ export const fetchQuizQuestions = async (topic, difficulty = "medium", questionC
     let response = null;
     let activeModel = activeModels[0];
 
-      if (candidate.status === 404) {
     for (const model of activeModels) {
       // Try models in priority order and keep going when a model is unavailable.
       // eslint-disable-next-line no-await-in-loop
@@ -220,7 +219,7 @@ export const fetchQuizQuestions = async (topic, difficulty = "medium", questionC
       continue;
     }
 
-    if (!response || !response.ok) throw new Error(`Gemini API failed`);
+    if (!response || !response.ok) throw new Error("Gemini API failed");
 
     const data = await response.json();
     const modelText =

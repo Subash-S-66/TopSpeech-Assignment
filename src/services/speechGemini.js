@@ -2,7 +2,7 @@ import { buildSpeechLessonCards } from "../data/speechLessonData";
 
 const RECENT_KEY = "topspeech.recentQuestions";
 const RECENT_LIMIT = 30;
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-1.5-flash"];
+const GEMINI_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 const inFlightRequests = new Map();
 const DISABLED_MODELS_KEY = "topspeech.disabledGeminiModels";
 const GEMINI_COOLDOWN_KEY = "topspeech.geminiCooldownUntil";
@@ -208,8 +208,12 @@ export const fetchSpeechLessonCards = async ({ count = 5, difficulty = "medium" 
           continue;
         }
 
-        if (candidate.status === 429 || candidate.status === 403 || candidate.status === 503) {
+        if (candidate.status === 429 || candidate.status === 403) {
           setGeminiCooldown();
+          continue;
+        }
+
+        if (candidate.status === 503) {
           continue;
         }
 
