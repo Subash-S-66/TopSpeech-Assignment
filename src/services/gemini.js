@@ -1,5 +1,6 @@
 const normalizeQuestion = (item, index, topic) => {
-  const options = Array.isArray(item.options) ? item.options.filter(Boolean).slice(0, 6) : [];
+  const optionsRaw = Array.isArray(item.options) ? item.options.filter(Boolean).slice(0, 6) : [];
+  const options = optionsRaw.length >= 2 ? optionsRaw : ["Option A", "Option B", "Option C", "Option D"];
   const answer = typeof item.answer === "string" ? item.answer.trim() : "";
 
   return {
@@ -25,9 +26,9 @@ const fallbackByTopic = {
       difficulty: "easy",
     },
     {
-      question: "True/False: Binary search requires a sorted array.",
-      options: ["True", "False"],
-      answer: "True",
+      question: "MCQ: Binary search works correctly on which kind of array?",
+      options: ["Random array", "Sorted array", "Reverse-only array", "Sparse array only"],
+      answer: "Sorted array",
       explanation: "Binary search repeatedly halves a sorted range.",
       difficulty: "easy",
     },
@@ -39,9 +40,14 @@ const fallbackByTopic = {
       difficulty: "medium",
     },
     {
-      question: "Short concept: What is a hash collision?",
-      options: [],
-      answer: "When two keys map to the same hash index",
+      question: "MCQ: What is a hash collision?",
+      options: [
+        "When two keys map to the same index",
+        "When a hash table is empty",
+        "When sorting fails",
+        "When recursion exceeds stack size",
+      ],
+      answer: "When two keys map to the same index",
       explanation: "Collisions happen when distinct keys produce same bucket/index.",
       difficulty: "medium",
     },
@@ -64,9 +70,9 @@ const defaultFallback = [
     difficulty: "easy",
   },
   {
-    question: "True/False: Consistent daily practice outperforms sporadic long sessions.",
-    options: ["True", "False"],
-    answer: "True",
+    question: "MCQ: Which pattern usually improves retention more?",
+    options: ["One long weekly session", "Consistent daily practice", "No revision", "Only final review"],
+    answer: "Consistent daily practice",
     explanation: "Consistency compounds understanding and recall.",
     difficulty: "easy",
   },
@@ -78,9 +84,14 @@ const defaultFallback = [
     difficulty: "easy",
   },
   {
-    question: "Short concept: Define feedback loop in one line.",
-    options: [],
-    answer: "A cycle where outcomes are measured and used to improve the next iteration",
+    question: "MCQ: What best defines a feedback loop?",
+    options: [
+      "Ignoring outcomes and repeating the same plan",
+      "Measuring outcomes and improving the next iteration",
+      "Collecting data once and never reviewing it",
+      "Working without goals",
+    ],
+    answer: "Measuring outcomes and improving the next iteration",
     explanation: "Feedback loops connect results back into better decisions.",
     difficulty: "medium",
   },
@@ -114,7 +125,7 @@ export const fetchQuizQuestions = async (topic, difficulty = "medium") => {
     return getFallbackQuestions(topic);
   }
 
-  const prompt = `Generate exactly 5 quiz questions for the topic: ${topic}. Target overall difficulty: ${difficulty}. Include these types across the set: MCQ, true/false, flashcard, short concept question. Return only JSON array. Each item must have this schema: {"question":"","options":[],"answer":"","explanation":"","difficulty":""}. For short concept question, keep options as [] and answer as a short expected response.`;
+  const prompt = `Generate exactly 5 MCQ quiz questions for the topic: ${topic}. Target overall difficulty: ${difficulty}. Return only JSON array. Each item must have this schema: {"question":"","options":[],"answer":"","explanation":"","difficulty":""}. Rules: every question must include exactly 4 options; answer must match one of the options exactly.`;
 
   try {
     const response = await fetch(
@@ -145,7 +156,10 @@ export const fetchQuizQuestions = async (topic, difficulty = "medium") => {
       throw new Error("Gemini response is not a valid question array");
     }
 
-    const normalized = parsed.slice(0, 5).map((item, index) => normalizeQuestion(item, index, topic));
+    const normalized = parsed
+      .slice(0, 5)
+      .map((item, index) => normalizeQuestion(item, index, topic))
+      .filter((item) => item.options.length >= 2);
     if (normalized.length < 5) throw new Error("Gemini returned fewer than 5 valid questions");
 
     return normalized;

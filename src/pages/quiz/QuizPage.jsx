@@ -16,7 +16,6 @@ export default function QuizPage() {
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [choice, setChoice] = useState("");
-  const [shortAnswer, setShortAnswer] = useState("");
   const [result, setResult] = useState(null);
   const [score, setScore] = useState(0);
 
@@ -53,10 +52,9 @@ export default function QuizPage() {
   const question = questions[index];
   const answered = result !== null;
   const progress = Math.round(((index + 1) / total) * 100);
-  const isShort = question.options.length === 0;
 
   const evaluateAnswer = () => {
-    const userInput = isShort ? shortAnswer : choice;
+    const userInput = choice;
     if (!normalize(userInput)) return;
 
     const correct = normalize(userInput) === normalize(question.answer);
@@ -74,7 +72,6 @@ export default function QuizPage() {
 
     setIndex((prev) => prev + 1);
     setChoice("");
-    setShortAnswer("");
     setResult(null);
   };
 
@@ -108,46 +105,35 @@ export default function QuizPage() {
           <h2 className="text-xl font-bold text-slate-900">{question.question}</h2>
           <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{question.difficulty}</p>
 
-          {isShort ? (
-            <textarea
-              value={shortAnswer}
-              onChange={(event) => setShortAnswer(event.target.value)}
-              rows={4}
-              disabled={answered}
-              placeholder="Type your answer"
-              className="mt-4 w-full rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm outline-none transition focus:border-blue-400"
-            />
-          ) : (
-            <div className="mt-4 grid gap-3">
-              {question.options.map((option) => {
-                const selected = choice === option;
-                return (
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    whileHover={{ y: -2 }}
-                    key={option}
-                    type="button"
-                    disabled={answered}
-                    onClick={() => setChoice(option)}
-                    className={[
-                      "rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition",
-                      selected
-                        ? "border-blue-500 bg-blue-50 text-blue-900"
-                        : "border-slate-200 bg-white/75 text-slate-800 hover:border-slate-300",
-                    ].join(" ")}
-                  >
-                    {option}
-                  </motion.button>
-                );
-              })}
-            </div>
-          )}
+          <div className="mt-4 grid gap-3">
+            {question.options.map((option) => {
+              const selected = choice === option;
+              return (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ y: -2 }}
+                  key={option}
+                  type="button"
+                  disabled={answered}
+                  onClick={() => setChoice(option)}
+                  className={[
+                    "rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition",
+                    selected
+                      ? "border-blue-500 bg-blue-50 text-blue-900"
+                      : "border-slate-200 bg-white/75 text-slate-800 hover:border-slate-300",
+                  ].join(" ")}
+                >
+                  {option}
+                </motion.button>
+              );
+            })}
+          </div>
 
           {!answered ? (
             <button
               type="button"
               onClick={evaluateAnswer}
-              disabled={isShort ? !shortAnswer.trim() : !choice}
+              disabled={!choice}
               className="mt-5 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Check answer
