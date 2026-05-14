@@ -14,8 +14,15 @@ const navTabs = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const stats = useMemo(() => getLearningStats(), []);
-  const [difficulty, setDifficulty] = useState(stats.currentDifficulty || "medium");
-  const [dailyTime, setDailyTime] = useState(stats.dailyTime || DAILY_TIMES[1]);
+  const initialDifficulty = stats.currentDifficulty || "medium";
+  const initialDailyTime = stats.dailyTime || DAILY_TIMES[1];
+  const [difficulty, setDifficulty] = useState(initialDifficulty);
+  const [dailyTime, setDailyTime] = useState(initialDailyTime);
+  const [savedDifficulty, setSavedDifficulty] = useState(initialDifficulty);
+  const [savedDailyTime, setSavedDailyTime] = useState(initialDailyTime);
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const hasPreferenceChanges =
+    difficulty !== savedDifficulty || dailyTime !== savedDailyTime;
 
   const topic = stats.topic || "DSA";
   const currentStreak = stats.streakDays;
@@ -52,25 +59,30 @@ export default function Dashboard() {
     navigate("/onboarding/topic?edit=1");
   };
 
+  const handleSavePreferences = () => {
+    saveOnboarding({ currentDifficulty: difficulty, dailyTime });
+    setSavedDifficulty(difficulty);
+    setSavedDailyTime(dailyTime);
+    setShowSavedToast(true);
+    window.setTimeout(() => setShowSavedToast(false), 1600);
+  };
+
   return (
     <section className="w-full max-w-3xl pb-24 text-slate-900 sm:pb-6">
       <motion.header
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="mb-4 rounded-3xl border border-white/60 bg-gradient-to-r from-emerald-400/85 via-cyan-400/80 to-blue-500/85 p-6 text-white shadow-card sm:p-7"
+        className="relative mb-4 rounded-3xl border border-white/60 bg-gradient-to-r from-emerald-400/85 via-cyan-400/80 to-blue-500/85 p-6 text-white shadow-card sm:p-7"
       >
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">Today</p>
-          <button
-            type="button"
-            onClick={handleEditPath}
-            className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-900 transition hover:bg-slate-100 sm:px-4 sm:text-sm"
-          >
-            Edit Learning Path
-          </button>
-        </div>
-        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Today&apos;s {topic} Challenge</h1>
+        <button
+          type="button"
+          onClick={handleEditPath}
+          className="absolute right-4 top-4 rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-sm transition hover:bg-slate-100 sm:right-6 sm:top-6 sm:px-4 sm:text-sm"
+        >
+          Edit Learning Path
+        </button>
+        <h1 className="pr-32 text-2xl font-black tracking-tight sm:pr-40 sm:text-3xl">Today {topic} Challenge</h1>
       </motion.header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -165,13 +177,15 @@ export default function Dashboard() {
           >
             Save and start lesson
           </button>
-          <button
-            type="button"
-            onClick={() => saveOnboarding({ currentDifficulty: difficulty, dailyTime })}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Save preferences
-          </button>
+          {hasPreferenceChanges ? (
+            <button
+              type="button"
+              onClick={handleSavePreferences}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Save preferences
+            </button>
+          ) : null}
         </div>
       </motion.article>
 
@@ -237,6 +251,16 @@ export default function Dashboard() {
       </nav>
 
       <InstallPrompt />
+      {showSavedToast ? (
+        <motion.div
+          initial={{ opacity: 0, y: 12, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-lg sm:bottom-6"
+        >
+          ✓ Preferences saved
+        </motion.div>
+      ) : null}
     </section>
   );
 }
