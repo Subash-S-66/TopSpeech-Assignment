@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import LoadingSkeleton from "../../components/LoadingSkeleton";
+import LoadingPage from "../../components/LoadingPage";
 import { fetchQuizQuestions } from "../../services/gemini";
 import { getLearningStats, getQuestionCountFromStats, saveLessonResult } from "../../utils/storage";
 
@@ -31,7 +31,15 @@ export default function QuizPage() {
   }, [topic, learningStats.currentDifficulty, questionCount]);
 
   if (loading) {
-    return <LoadingSkeleton rows={Math.min(6, questionCount)} />;
+    return (
+      <LoadingPage
+        title="LevelUp"
+        message="Generating your challenge"
+        subtitle="Gemini is assembling a fresh set of adaptive quiz questions for this topic."
+        rows={Math.min(5, questionCount)}
+        accent="from-blue-500 via-cyan-400 to-emerald-500"
+      />
+    );
   }
 
   if (!questions.length) {

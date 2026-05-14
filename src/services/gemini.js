@@ -114,6 +114,59 @@ export const getFallbackQuestions = (topic, questionCount = 5) => {
   });
 };
 
+const DISABLED_MODELS_KEY = "quiz.disabledGeminiModels";
+const GEMINI_COOLDOWN_KEY = "quiz.geminiCooldownUntil";
+const GEMINI_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-1.5-flash"];
+
+const buildGeminiRequest = (prompt, apiKey, model) =>
+  fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.5 },
+    }),
+  });
+
+const loadDisabledModels = () => {
+  try {
+    const raw = localStorage.getItem(DISABLED_MODELS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveDisabledModel = (model) => {
+  try {
+    const cur = loadDisabledModels();
+    const next = Array.from(new Set([...cur, model]));
+    localStorage.setItem(DISABLED_MODELS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+};
+
+const setGeminiCooldown = () => {
+  try {
+    localStorage.setItem(GEMINI_COOLDOWN_KEY, String(Date.now() + GEMINI_COOLDOWN_MS));
+  } catch {}
+};
+
+const isGeminiOnCooldown = () => {
+  try {
+    const raw = localStorage.getItem(GEMINI_COOLDOWN_KEY);
+    const until = Number(raw || 0);
+    return Number.isFinite(until) && until > Date.now();
+  } catch {
+    return false;
+  }
+};
+
 const parseJsonFromText = (text) => {
   const cleaned = text.trim().replace(/^```json\s*/i, "").replace(/```$/i, "");
   const firstBracket = cleaned.indexOf("[");
@@ -133,19 +186,41 @@ export const fetchQuizQuestions = async (topic, difficulty = "medium", questionC
   const prompt = `Generate exactly ${questionCount} MCQ quiz questions for the topic: ${topic}. Target overall difficulty: ${difficulty}. Return only JSON array. Each item must have this schema: {"question":"","options":[],"answer":"","explanation":"","difficulty":""}. Rules: every question must include exactly 4 options; answer must match one of the options exactly.`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.5 },
-        }),
-      }
-    );
+    // If models are disabled or we're in cooldown, avoid calling Gemini
+    if (isGeminiOnCooldown()) return getFallbackQuestions(topic, questionCount);
 
-    if (!response.ok) throw new Error(`Gemini API failed with ${response.status}`);
+    const disabled = new Set(loadDisabledModels());
+    const activeModels = GEMINI_MODELS.filter((m) => !disabled.has(m));
+    if (activeModels.length === 0) return getFallbackQuestions(topic, questionCount);
+
+    let response = null;
+    let activeModel = activeModels[0];
+
+      if (candidate.status === 404) {
+    for (const model of activeModels) {
+      // Try models in priority order and keep going when a model is unavailable.
+      // eslint-disable-next-line no-await-in-loop
+      const candidate = await buildGeminiRequest(prompt, apiKey, model);
+      if (candidate.ok) {
+        response = candidate;
+        activeModel = model;
+        break;
+      }
+
+      if (candidate.status === 404) {
+        saveDisabledModel(model);
+        continue;
+      }
+
+      if (candidate.status === 429 || candidate.status === 403 || candidate.status === 503) {
+        setGeminiCooldown();
+        continue;
+      }
+
+      continue;
+    }
+
+    if (!response || !response.ok) throw new Error(`Gemini API failed`);
 
     const data = await response.json();
     const modelText =
